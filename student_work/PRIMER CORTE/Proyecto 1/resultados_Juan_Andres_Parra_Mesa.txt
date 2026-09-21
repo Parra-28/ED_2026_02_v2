@@ -1,0 +1,135 @@
+EVALUACION - Data Stream Processor
+============================================================
+Estudiante : Juan Andres Parra Mesa
+Fecha      : 2026-09-21 19:52:48
+Python     : 3.12.13 (Linux)
+Evaluador  : v1.1
+Clase      : DataProcessor (modulo __main__)
+
+== Interfaz y restricciones ==
+
+[PASS ] Define add, process_next, undo, pending y current_value
+[PASS ] Se puede crear DataProcessor() sin argumentos
+[PASS ] __init__ crea una ArrayQueue, un ArrayStack y una list
+[PASS ] No sustituye Queue/Stack por deque u otra estructura
+[PASS ] ArrayQueue y ArrayStack son las del curso (no reimplementadas)
+
+   Interfaz y restricciones: 5/5 OK
+
+== Pruebas obligatorias (1-17) ==
+
+[PASS ] 1. pending() sobre un procesador vacio
+[PASS ] 2. Agregar un registro
+[PASS ] 3. Agregar varios registros
+[PASS ] 4. Procesamiento FIFO
+[PASS ] 5. Procesar un registro
+[PASS ] 6. Procesar varios registros
+[PASS ] 7. Actualizar una variable existente
+[PASS ] 8. Consultar el valor actual
+[PASS ] 9. Realizar un undo()
+[PASS ] 10. Varios undo() consecutivos
+[PASS ] 11. process_next() con la Queue vacia -> Empty
+[PASS ] 12. undo() con historial vacio -> Empty
+[PASS ] 13. Deshacer la creacion de un dato que no existia
+[PASS ] 14. Varios cambios sobre la misma variable
+[PASS ] 15. add() con formato incorrecto
+[PASS ] 16. add() con value no numerico
+[PASS ] 17. current_value() de un sensor/variable nunca procesado -> KeyError
+
+   Pruebas obligatorias (1-17): 17/17 OK
+
+== Casos borde adicionales ==
+
+[PASS ] undo de una creacion entre actualizaciones de otra variable
+[PASS ] Sensores y variables distintos no se mezclan
+[PASS ] Acepta int y float; sigue funcionando tras un Empty
+
+   Casos borde adicionales: 3/3 OK
+
+== Bonus: redo() (opcional) ==
+
+   No implementado (no aplica).
+
+== RESUMEN ==
+
+   Interfaz y restricciones          5/ 5 OK   0 fallo(s)
+   Pruebas obligatorias (1-17)      17/17 OK   0 fallo(s)
+   Casos borde adicionales           3/ 3 OK   0 fallo(s)
+
+   Total sin bonus: 25/25 OK
+
+== CODIGO DE LA CLASE ==
+
+#CODIGO COMPLETO :)
+class DataProcessor:
+    def __init__(self):
+        self.pendientes = ArrayQueue()
+        self.historial = ArrayStack()
+        self.estado = []
+        
+    def add(self, record):
+        if len(record) != 3:
+            raise ValueError("El registro debe tener exactamente 3 componentes.")
+        
+        if not isinstance(record[2], (int, float)):
+            raise TypeError("El valor debe ser numérico.")
+        
+        self.pendientes.enqueue(record)
+        
+    def process_next(self):
+        if self.pendientes.is_empty(): 
+            raise Empty("No hay registros pendientes en la Queue")
+            
+        registro = self.pendientes.dequeue()
+        sensor, variable, valor_nuevo = registro
+        
+        dato_existe = False
+        
+        for i in range(len(self.estado)):
+            if self.estado[i][0] == sensor and self.estado[i][1] == variable:
+                valor_viejo = self.estado[i][2]
+                
+                self.historial.push(('actualizar', sensor, variable, valor_viejo))
+                
+                self.estado[i] = (sensor, variable, valor_nuevo)
+                dato_existe = True
+                break
+                
+        if not dato_existe:
+            self.historial.push(('crear', sensor, variable, None))
+            self.estado.append(registro)
+            
+        return registro
+        
+    def undo(self):
+        if self.historial.is_empty():
+            raise Empty("No hay cambios en el historial para deshacer")
+
+        instruccion = self.historial.pop()
+        accion, sensor, variable, valor_viejo = instruccion
+
+        if accion == 'crear':
+            for i in range(len(self.estado)):
+                if self.estado[i][0] == sensor and self.estado[i][1] == variable:
+                    self.estado.pop(i)
+                    break
+                    
+        elif accion == 'actualizar':
+            for i in range(len(self.estado)):
+                if self.estado[i][0] == sensor and self.estado[i][1] == variable:
+                    self.estado[i] = (sensor, variable, valor_viejo)
+                    break
+                    
+    def pending(self):
+        return len(self.pendientes)
+        
+    def current_value(self, sensor, variable):
+        for i in range(len(self.estado)):
+            if self.estado[i][0] == sensor and self.estado[i][1] == variable:
+                return self.estado[i][2]
+                
+        raise KeyError(f"Nunca se ha procesado un registro para {sensor} y {variable}")
+
+== INTEGRIDAD ==
+SHA256 codigo de la clase : e5aee9672082c1b3a98492d24ec1e9493e4ecae5f719d4bc50093ebbcbf4dd92
+SHA256 de este informe    : 35c0971d74ad3f6f0885333a301cb0e1d4e11d7c1e2187e8a71efff99d9e1904
